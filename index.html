@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記錄管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        main {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        table th {
+            background-color: #f1f1f1;
+        }
+        .income {
+            color: green;
+        }
+        .expense {
+            color: red;
+        }
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            margin-top: 20px;
+        }
+        .number-pad button {
+            width: 100%;
+            height: 60px;
+            font-size: 1.5em;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            background-color: #f1f1f1;
+            color: black; /* 改成黑色字體 */
+        }
+        .number-pad button:hover {
+            background-color: #ddd;
+        }
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filter-group label {
+            font-weight: bold;
+        }
+        .filter-group select, .filter-group input {
+            width: auto;
+        }
+        #financial-summary {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <header>記錄管理</header>
+
+    <main>
+
+        <h2>新增記錄</h2>
+        <form id="record-form">
+            <div class="form-group">
+                <label for="record-type">類型</label>
+                <select id="record-type" onchange="updateCategoryOptions()">
+                    <option value="income">收入</option>
+                    <option value="expense">支出</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="record-category">分類</label>
+                <select id="record-category">
+                    <!-- 類別選項會動態更新 -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="record-date">日期</label>
+                <input type="date" id="record-date" onchange="updateRecordList()" onclick="this.showPicker()">
+            </div>
+            <div class="form-group">
+                <label for="record-method">支付方式</label>
+                <select id="record-method">
+                    <option value="現金">現金</option>
+                    <option value="信用卡">信用卡</option>
+                    <option value="轉帳">轉帳</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="record-note">備註</label>
+                <textarea id="record-note"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="record-amount">金額</label>
+                <input type="number" id="record-amount">
+            </div>
+            <button type="button" onclick="addRecord()">新增記錄</button>
+        </form>
+
+        <div class="number-pad">
+            <button onclick="appendNumber('1')">1</button>
+            <button onclick="appendNumber('2')">2</button>
+            <button onclick="appendNumber('3')">3</button>
+            <button onclick="appendNumber('4')">4</button>
+            <button onclick="appendNumber('5')">5</button>
+            <button onclick="appendNumber('6')">6</button>
+            <button onclick="appendNumber('7')">7</button>
+            <button onclick="appendNumber('8')">8</button>
+            <button onclick="appendNumber('9')">9</button>
+            <button onclick="appendNumber('0')">0</button>
+            <button onclick="clearAmount()">AC</button>
+            <button onclick="backspace()">←</button>
+        </div>
+
+        <h2>記錄篩選</h2>
+        <div class="filter-group">
+            <div class="form-group">
+                <label for="filter-date">日期：</label>
+                <input type="date" id="filter-date" onchange="updateRecordList()">
+            </div>
+            <div class="form-group">
+                <label for="filter-type">類型：</label>
+                <select id="filter-type" onchange="updateRecordList()">
+                    <option value="">全部</option>
+                    <option value="income">收入</option>
+                    <option value="expense">支出</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filter-category">分類：</label>
+                <select id="filter-category" onchange="updateRecordList()">
+                    <option value="">全部</option>
+                    <option value="薪資收入">薪資收入</option>
+                    <option value="兼職收入">兼職收入</option>
+                    <option value="食品類">食品類</option>
+                    <option value="居住類">居住類</option>
+                    <!-- 更多選項 -->
+                </select>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>類型</th>
+                    <th>分類</th>
+                    <th>金額</th>
+                    <th>支付方式</th>
+                    <th>備註</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="record-list">
+                <!-- 記錄將會顯示在這裡 -->
+            </tbody>
+        </table>
+
+        <!-- 顯示總收入、總支出、損益 -->
+        <div id="financial-summary">
+            <p><strong>總收入：</strong> <span id="total-income">0</span> 元</p>
+            <p><strong>總支出：</strong> <span id="total-expense">0</span> 元</p>
+            <p><strong>損益：</strong> <span id="profit-loss">0</span> 元</p>
+        </div>
+
+    </main>
+
+    <script>
+        const categories = {
+            income: ["薪資收入", "兼職收入", "獎金/年終", "投資收入", "利息收入", "租金收入", "其他臨時收入"],
+            expense: ["食品類", "居住類", "交通類", "娛樂類", "購物類", "醫療類", "教育類", "社交類", "儲蓄與投資", "其他支出"]
+        };
+
+        let records = JSON.parse(localStorage.getItem("records")) || [];
+        let filterDate = "";
+        let filterType = "";
+        let filterCategory = "";
+
+        // 更新分類選項
+        function updateCategoryOptions() {
+            const recordType = document.getElementById("record-type").value;
+            const categorySelect = document.getElementById("record-category");
+            categorySelect.innerHTML = "";
+            categories[recordType].forEach((category) => {
+                const option = document.createElement("option");
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        // 更新記錄列表
+        function updateRecordList() {
+            const recordList = document.getElementById("record-list");
+            const totalIncomeElement = document.getElementById("total-income");
+            const totalExpenseElement = document.getElementById("total-expense");
+            const profitLossElement = document.getElementById("profit-loss");
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            const filteredRecords = records.filter(record => {
+                return (
+                    (!filterDate || record.date === filterDate) &&
+                    (!filterType || record.type === filterType) &&
+                    (!filterCategory || record.category === filterCategory)
+                );
+            });
+
+            recordList.innerHTML = "";
+            filteredRecords.forEach((record, index) => {
+                const row = document.createElement("tr");
+                row.classList.add(record.type);
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.type === 'income' ? '收入' : '支出'}</td>
+                    <td>${record.category}</td>
+                    <td>${record.amount}</td>
+                    <td>${record.method}</td>
+                    <td>${record.note}</td>
+                    <td><button onclick="editRecord(${index})">編輯</button> <button onclick="deleteRecord(${index})">刪除</button></td>
+                `;
+                recordList.appendChild(row);
+
+                if (record.type === 'income') {
+                    totalIncome += record.amount;
+                } else if (record.type === 'expense') {
+                    totalExpense += record.amount;
+                }
+            });
+
+            const profitLoss = totalIncome - totalExpense;
+
+            totalIncomeElement.textContent = totalIncome.toFixed(2);
+            totalExpenseElement.textContent = totalExpense.toFixed(2);
+            profitLossElement.textContent = profitLoss.toFixed(2);
+        }
+
+        // 更新記錄
+        function addRecord() {
+            const recordType = document.getElementById("record-type").value;
+            const recordCategory = document.getElementById("record-category").value;
+            const recordDate = document.getElementById("record-date").value;
+            const recordAmount = parseFloat(document.getElementById("record-amount").value);
+            const recordMethod = document.getElementById("record-method").value;
+            const recordNote = document.getElementById("record-note").value;
+
+            if (!recordDate || !recordAmount || !recordCategory) {
+                alert("請填寫完整的記錄資料！");
+                return;
+            }
+
+            const newRecord = {
+                date: recordDate,
+                type: recordType,
+                category: recordCategory,
+                amount: recordAmount,
+                method: recordMethod,
+                note: recordNote
+            };
+
+            records.push(newRecord);
+            localStorage.setItem("records", JSON.stringify(records));
+            updateRecordList();
+        }
+
+        // 編輯記錄
+        function editRecord(index) {
+            // 編輯功能
+        }
+
+        // 刪除記錄
+        function deleteRecord(index) {
+            records.splice(index, 1);
+            localStorage.setItem("records", JSON.stringify(records));
+            updateRecordList();
+        }
+
+        // 顯示數字
+        function appendNumber(num) {
+            const amountInput = document.getElementById("record-amount");
+            amountInput.value += num;
+        }
+
+        // 清除數字
+        function clearAmount() {
+            const amountInput = document.getElementById("record-amount");
+            amountInput.value = "";
+        }
+
+        // 回退一位
+        function backspace() {
+            const amountInput = document.getElementById("record-amount");
+            amountInput.value = amountInput.value.slice(0, -1);
+        }
+
+        // 初始化
+        window.onload = function() {
+            updateCategoryOptions();
+            updateRecordList();
+        }
+    </script>
+
+</body>
+</html>
