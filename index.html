@@ -83,7 +83,7 @@
             cursor: pointer;
             border: none;
             background-color: #f1f1f1;
-            color: black; /* 改成黑色字體 */
+            color: black;
         }
         .number-pad button:hover {
             background-color: #ddd;
@@ -106,6 +106,9 @@
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -125,15 +128,15 @@
             </div>
             <div class="form-group">
                 <label for="record-category">分類</label>
-                <select id="record-category">
+                <select id="record-category" aria-live="polite">
                     <!-- 類別選項會動態更新 -->
                 </select>
             </div>
             <div class="form-group">
                 <label for="record-date">日期</label>
-                <input type="date" id="record-date" onchange="updateRecordList()" onclick="this.showPicker()">
+                <input type="date" id="record-date" onchange="updateRecordList()">
             </div>
-            <div class="form-group" id="payment-method-group" style="display: none;">
+            <div class="form-group hidden" id="payment-method-group">
                 <label for="record-method">支付方式</label>
                 <select id="record-method" onchange="togglePaymentDetails()">
                     <option value="現金">現金</option>
@@ -142,20 +145,22 @@
                     <option value="行動支付">行動支付</option>
                 </select>
             </div>
-            <div class="form-group" id="mobile-payment-group" style="display: none;">
+            <div class="form-group hidden" id="mobile-payment-group">
                 <label for="mobile-payment-method">行動支付方式</label>
-                <select id="mobile-payment-method">
+                <select id="mobile-payment-method" onchange="handleCustomOption('mobile-payment-method')">
                     <option value="Apple Pay">Apple Pay</option>
                     <option value="Google Pay">Google Pay</option>
                     <option value="其他">其他</option>
+                    <option value="custom">+ 新增行動支付方式</option>
                 </select>
             </div>
-            <div class="form-group" id="credit-card-group" style="display: none;">
+            <div class="form-group hidden" id="credit-card-group">
                 <label for="credit-card-type">信用卡類別</label>
-                <select id="credit-card-type">
+                <select id="credit-card-type" onchange="handleCustomOption('credit-card-type')">
                     <option value="Visa">Visa</option>
                     <option value="MasterCard">MasterCard</option>
                     <option value="American Express">American Express</option>
+                    <option value="custom">+ 新增信用卡類別</option>
                 </select>
             </div>
             <div class="form-group">
@@ -206,7 +211,6 @@
                     <option value="兼職收入">兼職收入</option>
                     <option value="食品類">食品類</option>
                     <option value="居住類">居住類</option>
-                    <!-- 更多選項 -->
                 </select>
             </div>
         </div>
@@ -228,7 +232,6 @@
             </tbody>
         </table>
 
-        <!-- 顯示總收入、總支出、損益 -->
         <div id="financial-summary">
             <p><strong>總收入：</strong> <span id="total-income">0</span> 元</p>
             <p><strong>總支出：</strong> <span id="total-expense">0</span> 元</p>
@@ -244,11 +247,7 @@
         };
 
         let records = JSON.parse(localStorage.getItem("records")) || [];
-        let filterDate = "";
-        let filterType = "";
-        let filterCategory = "";
 
-        // 更新分類選項
         function updateCategoryOptions() {
             const recordType = document.getElementById("record-type").value;
             const categorySelect = document.getElementById("record-category");
@@ -261,43 +260,131 @@
             });
         }
 
-        // 切換支付方式欄位的顯示
         function togglePaymentMethod() {
-            const recordType = document.getElementById("record-type").value;
             const paymentMethodGroup = document.getElementById("payment-method-group");
-            if (recordType === "expense") {
-                paymentMethodGroup.style.display = "block";
-            } else {
-                paymentMethodGroup.style.display = "none";
-                document.getElementById("mobile-payment-group").style.display = "none";
-                document.getElementById("credit-card-group").style.display = "none";
-            }
+            const recordType = document.getElementById("record-type").value;
+            paymentMethodGroup.classList.toggle("hidden", recordType === "income");
         }
 
-        // 切換支付詳細選項
         function togglePaymentDetails() {
             const paymentMethod = document.getElementById("record-method").value;
-            const mobilePaymentGroup = document.getElementById("mobile-payment-group");
-            const creditCardGroup = document.getElementById("credit-card-group");
+            document.getElementById("mobile-payment-group").classList.toggle("hidden", paymentMethod !== "行動支付");
+            document.getElementById("credit-card-group").classList.toggle("hidden", paymentMethod !== "信用卡");
+        }
 
-            if (paymentMethod === "行動支付") {
-                mobilePaymentGroup.style.display = "block";
-                creditCardGroup.style.display = "none";
-            } else if (paymentMethod === "信用卡") {
-                creditCardGroup.style.display = "block";
-                mobilePaymentGroup.style.display = "none";
-            } else {
-                mobilePaymentGroup.style.display = "none";
-                creditCardGroup.style.display = "none";
+        function handleCustomOption(id) {
+            const selectElement = document.getElementById(id);
+            const selectedValue = selectElement.value;
+            if (selectedValue === "custom") {
+                const customValue = prompt("請輸入新的選項：");
+                if (customValue) {
+                    const option = document.createElement("option");
+                    option.value = customValue;
+                    option.textContent = customValue;
+                    option.selected = true;
+                    selectElement.appendChild(option);
+                }
             }
         }
 
-        // 初始化
-        window.onload = function() {
-            updateCategoryOptions();
-            togglePaymentMethod();
+        function addRecord() {
+            const recordType = document.getElementById("record-type").value;
+            const recordCategory = document.getElementById("record-category").value;
+            const recordDate = document.getElementById("record-date").value;
+            const recordAmount = parseFloat(document.getElementById("record-amount").value);
+            const recordNote = document.getElementById("record-note").value;
+
+            let paymentMethod = "";
+            if (recordType === "expense") {
+                const selectedMethod = document.getElementById("record-method").value;
+                if (selectedMethod === "行動支付") {
+                    paymentMethod = document.getElementById("mobile-payment-method").value;
+                } else if (selectedMethod === "信用卡") {
+                    paymentMethod = document.getElementById("credit-card-type").value;
+                } else {
+                    paymentMethod = selectedMethod;
+                }
+            }
+
+            if (!recordDate || isNaN(recordAmount) || !recordCategory) {
+                alert("請填寫完整的記錄資訊！");
+                return;
+            }
+
+            const record = {
+                type: recordType,
+                category: recordCategory,
+                date: recordDate,
+                amount: recordAmount,
+                note: recordNote,
+                paymentMethod: paymentMethod
+            };
+
+            records.push(record);
+            localStorage.setItem("records", JSON.stringify(records));
             updateRecordList();
         }
+
+        function updateRecordList() {
+            const recordList = document.getElementById("record-list");
+            recordList.innerHTML = "";
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            records.forEach((record, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.type === "income" ? "收入" : "支出"}</td>
+                    <td>${record.category}</td>
+                    <td class="${record.type}">${record.amount}</td>
+                    <td>${record.paymentMethod || "-"}</td>
+                    <td>${record.note}</td>
+                    <td><button onclick="deleteRecord(${index})">刪除</button></td>
+                `;
+                recordList.appendChild(row);
+
+                if (record.type === "income")
+                {
+                    totalIncome += record.amount;
+                } else {
+                    totalExpense += record.amount;
+                }
+            });
+
+            document.getElementById("total-income").textContent = totalIncome.toFixed(2);
+            document.getElementById("total-expense").textContent = totalExpense.toFixed(2);
+            document.getElementById("profit-loss").textContent = (totalIncome - totalExpense).toFixed(2);
+        }
+
+        function deleteRecord(index) {
+            if (confirm("確定要刪除此記錄嗎？")) {
+                records.splice(index, 1);
+                localStorage.setItem("records", JSON.stringify(records));
+                updateRecordList();
+            }
+        }
+
+        function appendNumber(number) {
+            const amountInput = document.getElementById("record-amount");
+            amountInput.value = (amountInput.value || "") + number;
+        }
+
+        function clearAmount() {
+            document.getElementById("record-amount").value = "";
+        }
+
+        function backspace() {
+            const amountInput = document.getElementById("record-amount");
+            amountInput.value = amountInput.value.slice(0, -1);
+        }
+
+        function init() {
+            updateCategoryOptions();
+            updateRecordList();
+        }
+
+        document.addEventListener("DOMContentLoaded", init);
     </script>
 
 </body>
