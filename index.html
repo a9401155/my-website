@@ -273,20 +273,33 @@
         }
 
         function handleCustomOption(id) {
-            const selectElement = document.getElementById(id);
-            const selectedValue = selectElement.value;
-            if (selectedValue === "custom") {
-                const customValue = prompt("請輸入新的選項：");
-                if (customValue) {
-                    const option = document.createElement("option");
-                    option.value = customValue;
-                    option.textContent = customValue;
-                    option.selected = true;
-                    selectElement.appendChild(option);
-                }
+    const selectElement = document.getElementById(id);
+    const selectedValue = selectElement.value;
+    if (selectedValue === "custom") {
+        const customValue = prompt("請輸入新的選項：");
+        if (customValue) {
+            // 儲存新增的選項
+            if (id === "mobile-payment-method") {
+                // 儲存行動支付方式
+                const mobilePayments = JSON.parse(localStorage.getItem("mobilePayments")) || [];
+                mobilePayments.push(customValue);
+                localStorage.setItem("mobilePayments", JSON.stringify(mobilePayments));
+            } else if (id === "credit-card-type") {
+                // 儲存信用卡類別
+                const creditCards = JSON.parse(localStorage.getItem("creditCards")) || [];
+                creditCards.push(customValue);
+                localStorage.setItem("creditCards", JSON.stringify(creditCards));
             }
-        }
 
+            // 更新選項
+            const option = document.createElement("option");
+            option.value = customValue;
+            option.textContent = customValue;
+            option.selected = true;
+            selectElement.appendChild(option);
+        }
+    }
+}
         function addRecord() {
             const recordType = document.getElementById("record-type").value;
             const recordCategory = document.getElementById("record-category").value;
@@ -325,37 +338,49 @@
             updateRecordList();
         }
 
-        function updateRecordList() {
-            const recordList = document.getElementById("record-list");
-            recordList.innerHTML = "";
-            let totalIncome = 0;
-            let totalExpense = 0;
+function updateRecordList() {
+    const recordList = document.getElementById("record-list");
+    const filterDate = document.getElementById("filter-date").value;
+    const filterType = document.getElementById("filter-type").value;
+    const filterCategory = document.getElementById("filter-category").value;
 
-            records.forEach((record, index) => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${record.date}</td>
-                    <td>${record.type === "income" ? "收入" : "支出"}</td>
-                    <td>${record.category}</td>
-                    <td class="${record.type}">${record.amount}</td>
-                    <td>${record.paymentMethod || "-"}</td>
-                    <td>${record.note}</td>
-                    <td><button onclick="deleteRecord(${index})">刪除</button></td>
-                `;
-                recordList.appendChild(row);
+    recordList.innerHTML = "";
+    let totalIncome = 0;
+    let totalExpense = 0;
 
-                if (record.type === "income")
-                {
-                    totalIncome += record.amount;
-                } else {
-                    totalExpense += record.amount;
-                }
-            });
+    records
+        .filter(record => {
+            // 篩選條件：
+            const matchesDate = filterDate ? record.date === filterDate : true;
+            const matchesType = filterType ? record.type === filterType : true;
+            const matchesCategory = filterCategory ? record.category === filterCategory : true;
+            return matchesDate && matchesType && matchesCategory;
+        })
+        .forEach((record, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${record.date}</td>
+                <td>${record.type === "income" ? "收入" : "支出"}</td>
+                <td>${record.category}</td>
+                <td class="${record.type}">${record.amount}</td>
+                <td>${record.paymentMethod || "-"}</td>
+                <td>${record.note}</td>
+                <td><button onclick="deleteRecord(${index})">刪除</button></td>
+            `;
+            recordList.appendChild(row);
 
-            document.getElementById("total-income").textContent = totalIncome.toFixed(2);
-            document.getElementById("total-expense").textContent = totalExpense.toFixed(2);
-            document.getElementById("profit-loss").textContent = (totalIncome - totalExpense).toFixed(2);
-        }
+            // 更新總收入與支出
+            if (record.type === "income") {
+                totalIncome += record.amount;
+            } else {
+                totalExpense += record.amount;
+            }
+        });
+
+    document.getElementById("total-income").textContent = totalIncome.toFixed(2);
+    document.getElementById("total-expense").textContent = totalExpense.toFixed(2);
+    document.getElementById("profit-loss").textContent = (totalIncome - totalExpense).toFixed(2);
+}
 
         function deleteRecord(index) {
             if (confirm("確定要刪除此記錄嗎？")) {
@@ -382,9 +407,31 @@
         function init() {
             updateCategoryOptions();
             updateRecordList();
+	    loadCustomOptions();
         }
+function loadCustomOptions() {
+    // 加載行動支付方式
+    const mobilePayments = JSON.parse(localStorage.getItem("mobilePayments")) || [];
+    const mobilePaymentSelect = document.getElementById("mobile-payment-method");
+    mobilePayments.forEach(payment => {
+        const option = document.createElement("option");
+        option.value = payment;
+        option.textContent = payment;
+        mobilePaymentSelect.appendChild(option);
+    });
 
+    // 加載信用卡類別
+    const creditCards = JSON.parse(localStorage.getItem("creditCards")) || [];
+    const creditCardSelect = document.getElementById("credit-card-type");
+    creditCards.forEach(card => {
+        const option = document.createElement("option");
+        option.value = card;
+        option.textContent = card;
+        creditCardSelect.appendChild(option);
+    });
+}
         document.addEventListener("DOMContentLoaded", init);
+
     </script>
 
 </body>
