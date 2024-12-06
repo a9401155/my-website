@@ -147,21 +147,20 @@
             </div>
             <div class="form-group hidden" id="mobile-payment-group">
                 <label for="mobile-payment-method">行動支付方式</label>
-                <select id="mobile-payment-method" onchange="handleCustomOption('mobile-payment-method')">
-                    <option value="Apple Pay">Apple Pay</option>
-                    <option value="Google Pay">Google Pay</option>
-                    <option value="其他">其他</option>
-                    <option value="custom">+ 新增行動支付方式</option>
-                </select>
+<select id="mobile-payment-method" onchange="handleCustomOption('mobile-payment-method'); handleDeleteOption('mobile-payment-method')">
+    <option value="Apple Pay">Apple Pay</option>
+    <option value="Google Pay">Google Pay</option>
+    <option value="其他">其他</option>
+    <option value="custom">+ 新增行動支付方式</option>
+    <option value="delete">- 刪除行動支付方式</option>
+</select>
             </div>
             <div class="form-group hidden" id="credit-card-group">
                 <label for="credit-card-type">信用卡類別</label>
-                <select id="credit-card-type" onchange="handleCustomOption('credit-card-type')">
-                    <option value="Visa">Visa</option>
-                    <option value="MasterCard">MasterCard</option>
-                    <option value="American Express">American Express</option>
-                    <option value="custom">+ 新增信用卡類別</option>
-                </select>
+<select id="credit-card-type" onchange="handleCustomOption('credit-card-type'); handleDeleteOption('credit-card-type')">
+    <option value="custom">+ 新增信用卡類別</option>
+    <option value="delete">- 刪除信用卡類別</option>
+</select>
             </div>
             <div class="form-group">
                 <label for="record-note">備註</label>
@@ -172,6 +171,11 @@
                 <input type="number" id="record-amount">
             </div>
             <button type="button" onclick="addRecord()">新增記錄</button>
+<!-- 導出和導入的按鈕 -->
+    <button type="button" onclick="exportLocalStorage()">導出所有資料</button>
+    <input type="file" id="import-file" onchange="importLocalStorage(event)" style="display: none;">
+    <button type="button" onclick="document.getElementById('import-file').click()">導入所有資料</button>
+</div>
         </form>
 
         <div class="number-pad">
@@ -272,7 +276,7 @@
             document.getElementById("credit-card-group").classList.toggle("hidden", paymentMethod !== "信用卡");
         }
 
-        function handleCustomOption(id) {
+function handleCustomOption(id) {
     const selectElement = document.getElementById(id);
     const selectedValue = selectElement.value;
     if (selectedValue === "custom") {
@@ -300,6 +304,39 @@
         }
     }
 }
+function handleDeleteOption(id) {
+    const selectElement = document.getElementById(id);
+    const selectedValue = selectElement.value;
+    
+    // 檢查是否選擇刪除選項
+    if (selectedValue === "delete") {
+        const optionToDelete = prompt("請輸入要刪除的選項：");
+        
+        if (optionToDelete) {
+            let optionsArray = [];
+            
+            if (id === "mobile-payment-method") {
+                optionsArray = JSON.parse(localStorage.getItem("mobilePayments")) || [];
+            } else if (id === "credit-card-type") {
+                optionsArray = JSON.parse(localStorage.getItem("creditCards")) || [];
+            }
+            
+            // 查找並移除選項
+            const index = optionsArray.indexOf(optionToDelete);
+            if (index !== -1) {
+                optionsArray.splice(index, 1); // 移除選項
+                localStorage.setItem(id === "mobile-payment-method" ? "mobilePayments" : "creditCards", JSON.stringify(optionsArray));
+
+                // 更新選項
+                selectElement.innerHTML = ""; // 清空選項
+                loadCustomOptions(); // 重新加載自訂選項
+            } else {
+                alert("找不到該選項！");
+            }
+        }
+    }
+}
+
         function addRecord() {
             const recordType = document.getElementById("record-type").value;
             const recordCategory = document.getElementById("record-category").value;
@@ -410,7 +447,7 @@ function updateRecordList() {
 	    loadCustomOptions();
         }
 function loadCustomOptions() {
-    // 加載行動支付方式
+    // 刪除行動支付方式
     const mobilePayments = JSON.parse(localStorage.getItem("mobilePayments")) || [];
     const mobilePaymentSelect = document.getElementById("mobile-payment-method");
     mobilePayments.forEach(payment => {
@@ -418,9 +455,10 @@ function loadCustomOptions() {
         option.value = payment;
         option.textContent = payment;
         mobilePaymentSelect.appendChild(option);
+
     });
 
-    // 加載信用卡類別
+    // 刪除信用卡類別
     const creditCards = JSON.parse(localStorage.getItem("creditCards")) || [];
     const creditCardSelect = document.getElementById("credit-card-type");
     creditCards.forEach(card => {
@@ -431,6 +469,47 @@ function loadCustomOptions() {
     });
 }
         document.addEventListener("DOMContentLoaded", init);
+function exportLocalStorage() {
+    // 將所有localStorage內容轉換為一個 JSON 字串
+    const allData = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        allData[key] = JSON.parse(localStorage.getItem(key));
+    }
+
+    // 將 JSON 字串轉換為 Blob（用於下載）
+    const jsonData = JSON.stringify(allData, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'localStorageBackup.json';
+    link.click();
+}
+function importLocalStorage(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        alert("請選擇一個文件！");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+
+            // 將導入的資料寫入到localStorage
+            for (const [key, value] of Object.entries(importedData)) {
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+
+            alert("資料已成功導入！");
+            location.reload(); // 重新加載頁面以更新所有資料
+        } catch (error) {
+            alert("導入資料時出錯：" + error.message);
+        }
+    };
+    reader.readAsText(file);
+}
 
     </script>
 
