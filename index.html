@@ -215,7 +215,7 @@
                 </select>
             </div>
         </div>
-        <h2>收支篩選</h2>
+        <h2>收支紀錄</h2>
         <table>
             <thead>
                 <tr>
@@ -370,6 +370,9 @@ function handleDeleteOption(id) {
             records.push(record);
             localStorage.setItem("records", JSON.stringify(records));
             updateRecordList();
+
+        // 顯示新增完成的彈窗
+        alert("記錄已成功新增！");
         }
 
 function updateRecordList() {
@@ -382,6 +385,9 @@ function updateRecordList() {
     let totalIncome = 0;
     let totalExpense = 0;
 
+    // 將記錄按日期排序（由新到舊）
+    records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     records
         .filter(record => {
             // 篩選條件：
@@ -391,15 +397,21 @@ function updateRecordList() {
             return matchesDate && matchesType && matchesCategory;
         })
         .forEach((record, index) => {
+            // 加上負號顯示支出金額
+            const displayAmount = record.type === "expense" ? `-${Math.abs(record.amount)}` : record.amount;
+
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td>${record.date}</td>
                 <td>${record.type === "income" ? "收入" : "支出"}</td>
                 <td>${record.category}</td>
-                <td class="${record.type}">${record.amount}</td>
+                <td class="${record.type}">${displayAmount}</td>
                 <td>${record.paymentMethod || "-"}</td>
                 <td>${record.note}</td>
-                <td><button onclick="deleteRecord(${index})">刪除</button></td>
+                <td>
+                    <button onclick="editRecord(${index})">編輯</button>
+                    <button onclick="deleteRecord(${index})">刪除</button>
+                </td>
             `;
             recordList.appendChild(row);
 
@@ -415,6 +427,7 @@ function updateRecordList() {
     document.getElementById("total-expense").textContent = totalExpense.toFixed(2);
     document.getElementById("profit-loss").textContent = (totalIncome - totalExpense).toFixed(2);
 }
+
 
         function deleteRecord(index) {
             if (confirm("確定要刪除此記錄嗎？")) {
@@ -443,6 +456,33 @@ function updateRecordList() {
             updateRecordList();
 	    loadCustomOptions();
         }
+function editRecord(index) {
+    const record = records[index];
+    document.getElementById("record-type").value = record.type;
+    updateCategoryOptions(); // 更新類別選項
+    document.getElementById("record-category").value = record.category;
+    document.getElementById("record-date").value = record.date;
+    document.getElementById("record-amount").value = record.amount;
+    document.getElementById("record-note").value = record.note;
+
+    // 設定支付方式相關選項
+    if (record.type === "expense") {
+        togglePaymentMethod();
+        document.getElementById("record-method").value = record.paymentMethod || "現金";
+        togglePaymentDetails();
+
+        if (record.paymentMethod === "行動支付") {
+            document.getElementById("mobile-payment-method").value = record.paymentMethod;
+        } else if (record.paymentMethod === "信用卡") {
+            document.getElementById("credit-card-type").value = record.paymentMethod;
+        }
+    }
+
+    // 移除舊的記錄
+    records.splice(index, 1);
+    updateRecordList();
+}
+
 function loadCustomOptions() {
     // 刪除行動支付方式
     const mobilePayments = JSON.parse(localStorage.getItem("mobilePayments")) || [];
